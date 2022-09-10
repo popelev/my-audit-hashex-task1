@@ -1,7 +1,7 @@
 # HashEx Cyber Academy. Task 1. Audit
 
-Task Source - https://github.com/popelev/hashex-task1-audit/blob/master/contracts/TaskSource.sol
-Fixed task - https://github.com/popelev/hashex-task1-audit/blob/master/contracts/FixedTask.sol
+Task Source - https://github.com/popelev/hashex-task1-audit/blob/master/contracts/TaskSource.sol  
+My version of contract - https://github.com/popelev/hashex-task1-audit/blob/master/contracts/FixedTask.sol
 
 0. Can not "transferFrom" in Sale constructor without allowance.
    Sale contract can not recieve allowance before it will be deployed, because we need address Sale contract for give allowance.
