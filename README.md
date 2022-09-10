@@ -1,1 +1,1 @@
-# hashex-task1-audit
+# HashEx Cyber Academy. Task 1. Audit
