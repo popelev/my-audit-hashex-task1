@@ -15,17 +15,19 @@ contract GLDToken is ERC777 {
     }
 }
 
+
 contract Sale is Ownable {
+
     mapping(address => uint256) public purchasedTokens;
     uint256 constant PRICE = 0.2 ether;
     GLDToken public token;
 
-    constructor(uint256 _amountToSell, GLDToken _token) {
+    constructor(uint256 _amountToSell, GLDToken _token)  {
         token = _token;
         token.transferFrom(msg.sender, address(this), _amountToSell);
     }
 
-    modifier onlyAfterSale() {
+    modifier onlyAfterSale {
         require(block.timestamp > 1661790839, "sale not ended");
         _;
     }
@@ -34,20 +36,16 @@ contract Sale is Ownable {
         require(msg.value > 0, "zero amount");
         require(msg.sender == tx.origin, "only eoa");
         uint256 tokensPurchased = msg.value / PRICE;
-        purchasedTokens[msg.sender] =
-            purchasedTokens[msg.sender] +
-            tokensPurchased;
+        purchasedTokens[msg.sender] = purchasedTokens[msg.sender] + tokensPurchased;
     }
 
     function withdraw() external onlyAfterSale {
-        require(
-            token.transfer(msg.sender, purchasedTokens[msg.sender]),
-            "transfer failed"
-        );
+        require(token.transfer(msg.sender, purchasedTokens[msg.sender]), "transfer failed");
         purchasedTokens[msg.sender] = 0;
     }
 
     function withdrawEther(address payable recipient) external onlyOwner {
         recipient.transfer(address(this).balance);
     }
+
 }
