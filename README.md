@@ -6,21 +6,20 @@
 - [1 Disclaimer](#1-disclaimer)
 - [2 Overview](#2-overview)
   - [2.1 Summary](#21-summary)
-    - [Audit Details](#audit-details)
   - [2.2 Contracts](#22-contracts)
 - [3 Found Issues](#3-found-issues)
   - [C1. GLDToken](#c1-gldtoken)
   - [C2. Sale](#c2-sale)
 - [4 Contracts](#4-contracts)
-  - [C2 GLDToken](#c2-gldtoken)
-    - [C2-01. Issue title](#c2-01-issue-title)
+  - [C1. GLDToken](#c1-gldtoken)
   - [C2 Sale](#c2-sale)
-    - [C2-0?. transferFrom in constructor](#c2-0-transferfrom-in-constructor)
-    - [C2-0?. Issue title](#c2-0-issue-title)
-    - [C2-0?. Issue title](#c2-0-issue-title)
-    - [C2-0?. Issue title](#c2-0-issue-title)
-    - [C2-0?. Issue title](#c2-0-issue-title)
-    - [C2-0?. Issue title](#c2-0-issue-title)
+    - [C2-01. Constructor Business logic](#c2-01-constructor-business-logic)
+    - [C2-02. Unchecked math](#c2-02-unchecked-math)
+    - [C2-03. Logic depend on gas costs](#c2-03-logic-depend-on-gas-costs)
+    - [C2-04. Block values as a proxy for time:](#c2-04-block-values-as-a-proxy-for-time)
+    - [C2-05. Code With No Effects](#c2-05-code-with-no-effects)
+    - [C2-06. Withdraw Business logic](#c2-06-withdraw-business-logic)
+    - [C2-07. Best practices ecommendations](#c2-07-best-practices-ecommendations)
 - [Appendix A - Issuse severity classification](#appendix-a---issuse-severity-classification)
   - [Critical](#critical)
   - [High](#high)
@@ -28,7 +27,6 @@
   - [Low](#low)
   - [Info](#info)
 - [Appendix B - List of examined issue types](#appendix-b---list-of-examined-issue-types)
-
 ________________
 ## 1 Disclaimer
 
@@ -36,9 +34,6 @@ ________________
 ## 2 Overview
 
 ### 2.1 Summary
-
-
-#### Audit Details
 
 * **Project Name:** practice-hashex-academy-task1
 * **Source URL :** https://gist.github.com/kataloo/3674868bf07de6a98e68edff8622ed5d
@@ -81,34 +76,28 @@ No issues were found.
 | id    | Severity | Title                                         | Status | 
 | ----- | -------- | --------------------------------------------- | ------ |
 | C2-01 | Critical | [Title 1]()| Resolved |
-| C2-0  |          |        |          |
-| C2-0  |          |        |          |
-| C2-0  |          |        |          |
-| C2-0  |          |        |          |
-| C2-0  |          |        |          |
-| C2-0  |          |        |          |
-| C2-0  |          |        |          |
+| C2-02 |          |        |          |
+| C2-03 |          |        |          |
+| C2-04 |          |        |          |
+| C2-05 |          |        |          |
+| C2-06 |          |        |          |
+
 
 
 ________________
 ## 4 Contracts
-________________
-### C2 GLDToken
-ERC-777 token. No issues were found.
-________________
-#### C2-01. Issue title
 
-**Description**
+### C1. GLDToken
 
-**Remediation**
+No issues were found.
 ________________
 ### C2 Sale
-Contract for sale ERC-777 token with timelock of withdraw. Price of token is constant
+Contract for sale ERC-777 token with timelock of withdraw. Price of token is constant.
 ________________
-#### C2-0?. transferFrom in constructor
-Can not "transferFrom" in constructor without allowance.
-   Sale contract can not recieve allowance before it will be deployed, because we need address Sale contract for give allowance.
-
+#### C2-01. Constructor Business logic
+**Description:**
+Can't transfer tokens with `transferFrom` function in constructor, because this contract does not have allowance to transfer from `msg.sender`.
+`Sale` contract can't recieve allowance before it will be deployed, because `GLDToken.approve`  need address of `Sale` contract as parameter.
 ```solidity
 constructor(uint256 _amountToSell, GLDToken _token) {
     token = _token;
@@ -117,8 +106,8 @@ constructor(uint256 _amountToSell, GLDToken _token) {
 
 ```
 
-Constructor splited for two functions. Befor call "putOnSale" msg.sender should give allowance to Sale contract
-
+**Recommendation:**
+Split constructor for two functions. After deploy `Sale` contract to network, owner of tokens should give allowance to `Sale` contract to transfer tokens. And after that call  `putOnSale()`
 ```solidity
 constructor(GLDToken _token) {
     token = _token;
@@ -131,50 +120,82 @@ function putOnSale(uint256 _amountToSell) external onlyOwner {
 
 ```
 ________________
-#### C2-0?. Issue title
-Not used "import ERC20.sol".
+#### C2-02. Unchecked math
+**Description:**
+Incorrect calculation `tokensPurchased` (without decimals)
 
-2. SWC-116 Block values as a proxy for time:
-   Magic number changed on named constant varible
+Token has decimal digits (18 numbers after point). Current logic ignore that: 
+```solidity
+uint256 tokensPurchased = msg.value / PRICE;
+```
+For example:
+msg.value = 1 ether  
+PRICE = 0.2 ether  
+tokensPurchased = 5, but must be 5000000000000000000
 
+**Recommendation:**
+Add  `token.decimals()` in calculation
+```solidity
+uint256 tokensPurchased = msg.value * 10**token.decimals() / PRICE
+```
+________________
+#### C2-03. Logic depend on gas costs
+**Description:**
+Any smart contract that uses `transfer()`  is taking a hard dependency on gas costs by forwarding a fixed amount of gas: 2300.
+```solidity
+function withdrawEther(address payable recipient) external onlyOwner {
+    recipient.transfer(address(this).balance);
+}
+```
+
+**Recommendation:**
+Our recommendation is to stop using `transfer()` and switch to using `call()` instead:
+```solidity
+function withdrawEther(address payable recipient) external onlyOwner {
+	(bool success, ) = recipient.call{value: address(this).balance}("");
+	require(success, "transfer failed");
+}
+```
+________________
+#### C2-04. Block values as a proxy for time:
+
+**Description:**
+SWC-116. `block.timestamp` used as proxy for time
 ```solidity
 modifier onlyAfterSale {
     require(block.timestamp > 1661790839, "sale not ended");
     _;
 }
 ```
+
+**Recommendation:**
+* Developers should write smart contracts with the notion that block values are not precise, and the use of them can lead to unexpected effects. Alternatively, they may make use oracles.
+
+* Magic number change to named constant varible.
 ________________
-#### C2-0?. Issue title
-"transfer" function is not recomended for use
-
+#### C2-05. Code With No Effects
+**Description:**
+Imported `ERC20` contract never used.
 ```solidity
-function withdrawEther(address payable recipient) external onlyOwner {
-    recipient.transfer(address(this).balance);
-}
-
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 ```
 
-"transfer" -> "call":
+**Recommendation:**
+Delete this line.
+________________
+#### C2-06. Withdraw Business logic
+**Description:**
+After finish of sale some amout of tokens can be not sold
 
+**Recommendation:**
+We recommend add function `withdrawNotSoldTokens()` to contract for withdraw not sold tokens
+________________
+#### C2-07. Best practices ecommendations
+* Add events.
+* Use one style of varible naming averywhere. Rename input varible `recipient` to `_recipient`
 ```solidity
-function withdrawEther(address payable recipient) external onlyOwner {
-    recipient.call{ value: address(this).balance };
-}
-
+function withdrawEther(address payable recipient)
 ```
-________________
-#### C2-0?. Issue title
-Incorrect calculation "tokensPurchased" (without decimals)
-
-```solidity
-uint256 tokensPurchased = msg.value / PRICE;
-```
-________________
-#### C2-0?. Issue title
-Recomend add function "withdrawNotSoldTokens" to contract
-________________
-#### C2-0?. Issue title
-Recomend add events
 ________________
 ## Appendix A - Issuse severity classification 
 
