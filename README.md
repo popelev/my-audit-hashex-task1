@@ -1,32 +1,33 @@
 # My audit practice. Hashex Academy. Task 1
 
-
 ## Table of contents
 
-- [1 Disclaimer](#1-disclaimer)
-- [2 Overview](#2-overview)
-  - [2.1 Summary](#21-summary)
-  - [2.2 Contracts](#22-contracts)
-- [3 Found Issues](#3-found-issues)
-  - [C1. GLDToken](#c1-gldtoken)
-  - [C2. Sale](#c2-sale)
-- [4 Contracts](#4-contracts)
-  - [C1. GLDToken](#c1-gldtoken)
-  - [C2 Sale](#c2-sale)
-    - [C2-01. Constructor Business logic](#c2-01-constructor-business-logic)
-    - [C2-02. Unchecked math](#c2-02-unchecked-math)
-    - [C2-03. Logic depend on gas costs](#c2-03-logic-depend-on-gas-costs)
-    - [C2-04. Block values as a proxy for time:](#c2-04-block-values-as-a-proxy-for-time)
-    - [C2-05. Code With No Effects](#c2-05-code-with-no-effects)
-    - [C2-06. Withdraw Business logic](#c2-06-withdraw-business-logic)
-    - [C2-07. Best practices ecommendations](#c2-07-best-practices-ecommendations)
-- [Appendix A - Issuse severity classification](#appendix-a---issuse-severity-classification)
-  - [Critical](#critical)
-  - [High](#high)
-  - [Medium](#medium)
-  - [Low](#low)
-  - [Info](#info)
-- [Appendix B - List of examined issue types](#appendix-b---list-of-examined-issue-types)
+  - [1 Disclaimer](#1-disclaimer)
+  - [2 Overview](#2-overview)
+    - [2.1 Summary](#21-summary)
+    - [2.2 Contracts](#22-contracts)
+  - [3 Found Issues](#3-found-issues)
+    - [C1. GLDToken](#c1-gldtoken)
+    - [C2. Sale](#c2-sale)
+  - [4 Contracts](#4-contracts)
+    - [C1. GLDToken](#c1-gldtoken)
+    - [C2 Sale](#c2-sale)
+      - [C2-01. Constructor Business logic (Critical)](#c2-01-constructor-business-logic-critical)
+      - [C2-02. Unlimited token sale (Critical)](#c2-02-unlimited-token-sale-critical)
+      - [C2-03. Incorrect math of tokens purchase (Critical)](#c2-03-incorrect-math-of-tokens-purchase-critical)
+      - [C2-04. Logic depend on gas costs (High)](#c2-04-logic-depend-on-gas-costs-high)
+      - [C2-05. Block values as a proxy for time (Medium)](#c2-05-block-values-as-a-proxy-for-time-medium)
+      - [C2-06. Withdraw Business logic (Medium)](#c2-06-withdraw-business-logic-medium)
+      - [C2-07. Code With No Effects (Low)](#c2-07-code-with-no-effects-low)
+      - [C2-08. Best practices recommendations (Info)](#c2-08-best-practices-recommendations-info)
+  - [Appendix A - Issuse severity classification](#appendix-a---issuse-severity-classification)
+    - [Critical](#critical)
+    - [High](#high)
+    - [Medium](#medium)
+    - [Low](#low)
+    - [Info](#info)
+  - [Appendix B - List of examined issue types](#appendix-b---list-of-examined-issue-types)
+
 ________________
 ## 1 Disclaimer
 
@@ -75,13 +76,14 @@ No issues were found.
 
 | id    | Severity | Title                                         | Status | 
 | ----- | -------- | --------------------------------------------- | ------ |
-| C2-01 | Critical | [Title 1]()| Resolved |
-| C2-02 |          |        |          |
-| C2-03 |          |        |          |
-| C2-04 |          |        |          |
-| C2-05 |          |        |          |
-| C2-06 |          |        |          |
-
+| C2-01 | Critical | [Constructor Business logic](#c2-01-constructor-business-logic-critical)                    | Resolved |
+| C2-02 | Critical | [Unlimited token sale](#c2-02-unlimited-token-sale-critical)                          | Resolved |
+| C2-03 | Critical | [Incorrect math of tokens purchase](#c2-03-incorrect-math-of-tokens-purchase-critical)             | Resolved |
+| C2-04 | High     | [Logic depend on gas costs](#c2-04-logic-depend-on-gas-costs-high)                     | Resolved |
+| C2-05 | Medium   | [Block values as a proxy for time](#c2-06-block-values-as-a-proxy-for-time-Medium)              | Acknowledged |
+| C2-06 | Medium   | [Withdraw Business logic](#c2-06-withdraw-business-logic-medium)                       | Resolved |
+| C2-07 | Low      | [Code With No Effects](#c2-07-code-with-no-effects-low)                          | Resolved |
+| C2-08 | Info     | [Best practices recommendations](#c2-08-best-practices-recommendations-info)                | Resolved |
 
 
 ________________
@@ -94,7 +96,7 @@ ________________
 ### C2 Sale
 Contract for sale ERC-777 token with timelock of withdraw. Price of token is constant.
 ________________
-#### C2-01. Constructor Business logic
+#### C2-01. Constructor Business logic (Critical)
 **Description:**
 Can't transfer tokens with `transferFrom` function in constructor, because this contract does not have allowance to transfer from `msg.sender`.
 `Sale` contract can't recieve allowance before it will be deployed, because `GLDToken.approve`  need address of `Sale` contract as parameter.
@@ -120,7 +122,17 @@ function putOnSale(uint256 _amountToSell) external onlyOwner {
 
 ```
 ________________
-#### C2-02. Unchecked math
+#### C2-02. Unlimited token sale (Critical)
+**Description:**
+Maximum of sold tokens is unlimited.  Posible situation when sold more tokens then availible to sale
+
+**Recommendation:**
+Add additional logic to control available tokens on sale and check this condition in  `buyTokens()` function
+```solidity
+require(availableTokens >= tokensPurchased, "not enough token for sale");
+```
+________________
+#### C2-03. Incorrect math of tokens purchase (Critical)
 **Description:**
 Incorrect calculation `tokensPurchased` (without decimals)
 
@@ -139,7 +151,7 @@ Add  `token.decimals()` in calculation
 uint256 tokensPurchased = msg.value * 10**token.decimals() / PRICE
 ```
 ________________
-#### C2-03. Logic depend on gas costs
+#### C2-04. Logic depend on gas costs (High)
 **Description:**
 Any smart contract that uses `transfer()`  is taking a hard dependency on gas costs by forwarding a fixed amount of gas: 2300.
 ```solidity
@@ -157,7 +169,7 @@ function withdrawEther(address payable recipient) external onlyOwner {
 }
 ```
 ________________
-#### C2-04. Block values as a proxy for time:
+#### C2-05. Block values as a proxy for time (Medium)
 
 **Description:**
 SWC-116. `block.timestamp` used as proxy for time
@@ -173,7 +185,14 @@ modifier onlyAfterSale {
 
 * Magic number change to named constant varible.
 ________________
-#### C2-05. Code With No Effects
+#### C2-06. Withdraw Business logic (Medium)
+**Description:**
+After finish of sale some amout of tokens can be not sold
+
+**Recommendation:**
+We recommend add function `withdrawNotSoldTokens()` to contract for withdraw not sold tokens
+________________
+#### C2-07. Code With No Effects (Low)
 **Description:**
 Imported `ERC20` contract never used.
 ```solidity
@@ -183,14 +202,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 **Recommendation:**
 Delete this line.
 ________________
-#### C2-06. Withdraw Business logic
-**Description:**
-After finish of sale some amout of tokens can be not sold
-
-**Recommendation:**
-We recommend add function `withdrawNotSoldTokens()` to contract for withdraw not sold tokens
-________________
-#### C2-07. Best practices ecommendations
+#### C2-08. Best practicesr ecommendations (Info)
 * Add events.
 * Use one style of varible naming averywhere. Rename input varible `recipient` to `_recipient`
 ```solidity
