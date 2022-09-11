@@ -15,11 +15,12 @@
         -   [C2-01. Constructor Business logic (Critical)](#c2-01-constructor-business-logic-critical)
         -   [C2-02. Unlimited token sale (Critical)](#c2-02-unlimited-token-sale-critical)
         -   [C2-03. Incorrect math of tokens purchase (Critical)](#c2-03-incorrect-math-of-tokens-purchase-critical)
-        -   [C2-04. Logic depend on gas costs (High)](#c2-04-logic-depend-on-gas-costs-high)
+        -   [C2-04. Change state after token transfer (High)](#c2-04-change-state-befor-transfer-tokens-high)
         -   [C2-05. Block values as a proxy for time (Medium)](#c2-05-block-values-as-a-proxy-for-time-medium)
         -   [C2-06. Withdraw Business logic (Medium)](#c2-06-withdraw-business-logic-medium)
-        -   [C2-07. Code With No Effects (Low)](#c2-07-code-with-no-effects-low)
-        -   [C2-08. Best practices recommendations (Info)](#c2-08-best-practices-recommendations-info)
+        -   [C2-07. Native transfer (Low)](#c2-07-native-transfer-low)
+        -   [C2-08. Code With No Effects (Low)](#c2-08-code-with-no-effects-low)
+        -   [C2-09. Best practicesr ecommendations (Info)](#c2-09-best-practicesr-ecommendations-info)
 -   [Appendix A - Issuse severity classification](#appendix-a---issuse-severity-classification)
     -   [Critical](#critical)
     -   [High](#high)
@@ -68,8 +69,8 @@ This files contain next contracts:
 
 |        | Critical | High | Medium | Low | Informational |
 | :----: | :------: | :--: | :----: | :-: | :-----------: |
-|  Open  |  **0**   |  0   |   0    |  0  |       0       |
-| Closed |  **0**   |  0   |   0    |  0  |       0       |
+|  Open  |    3     |  1   |   2    |  2  |       1       |
+| Closed |    3     |  1   | **1**  |  2  |       1       |
 
 ### C1. GLDToken
 
@@ -82,11 +83,12 @@ No issues were found.
 | C2-01 | Critical | [Constructor Business logic](#c2-01-constructor-business-logic-critical)               | Resolved     |
 | C2-02 | Critical | [Unlimited token sale](#c2-02-unlimited-token-sale-critical)                           | Resolved     |
 | C2-03 | Critical | [Incorrect math of tokens purchase](#c2-03-incorrect-math-of-tokens-purchase-critical) | Resolved     |
-| C2-04 | High     | [Logic depend on gas costs](#c2-04-logic-depend-on-gas-costs-high)                     | Resolved     |
-| C2-05 | Medium   | [Block values as a proxy for time](#c2-06-block-values-as-a-proxy-for-time-Medium)     | Acknowledged |
+| C2-04 | High     | [Change state after token transfer](#c2-04-change-state-after-token-transfer-high)     | Resolved     |
+| C2-05 | Medium   | [Block values as a proxy for time](#c2-06-block-values-as-a-proxy-for-time-medium)     | Acknowledged |
 | C2-06 | Medium   | [Withdraw Business logic](#c2-06-withdraw-business-logic-medium)                       | Resolved     |
-| C2-07 | Low      | [Code With No Effects](#c2-07-code-with-no-effects-low)                                | Resolved     |
-| C2-08 | Info     | [Best practices recommendations](#c2-08-best-practices-recommendations-info)           | Resolved     |
+| C2-07 | Low      | [Native transfer](#c2-07-native-transfer-low)                                          | Resolved     |
+| C2-08 | Low      | [Code With No Effects](#c2-08-code-with-no-effects-low)                                | Resolved     |
+| C2-09 | Info     | [Best practicesr ecommendations](#c2-09-best-practicesr-ecommendations-info)           | Resolved     |
 
 ---
 
@@ -173,7 +175,7 @@ uint256 tokensPurchased = msg.value * 10**token.decimals() / PRICE
 
 ---
 
-#### C2-04. Change state befor transfer tokens (High)
+#### C2-04. Change state after token transfer (High)
 
 **Description:**
 State varible with balance erased after transfer. ERC777 has hooks `_beforeTokenTransfer` which can be used for reentrency attack and transfer tokens few times.
@@ -230,7 +232,7 @@ We recommend add function `withdrawNotSoldTokens()` to contract for withdraw not
 
 ---
 
-#### C2-04. Native transfer (Low)
+#### C2-07. Native transfer (Low)
 
 **Description:**
 Any smart contract that uses `transfer()`  is taking a hard dependency on gas costs by forwarding a fixed amount of gas: 2300.
@@ -255,7 +257,7 @@ function withdrawEther(address payable recipient) external onlyOwner {
 
 ---
 
-#### C2-07. Code With No Effects (Low)
+#### C2-08. Code With No Effects (Low)
 
 **Description:**
 Imported `ERC20` contract never used.
@@ -270,7 +272,7 @@ Delete this line.
 
 ---
 
-#### C2-08. Best practicesr ecommendations (Info)
+#### C2-09. Best practicesr ecommendations (Info)
 
 -   Add events.
 -   Use one style of varible naming averywhere. Rename input varible `recipient` to `_recipient`

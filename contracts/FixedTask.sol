@@ -5,7 +5,7 @@ pragma solidity 0.8.15;
 import "@openzeppelin/contracts/token/ERC777/ERC777.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract GLDToken is ERC777 {
+contract FixedGLDToken is ERC777 {
     constructor(uint256 initialSupply, address[] memory defaultOperators)
         ERC777("Gold", "GLD", defaultOperators)
     {
@@ -13,10 +13,10 @@ contract GLDToken is ERC777 {
     }
 }
 
-contract Sale is Ownable {
+contract FixedSale is Ownable {
     uint256 public constant PRICE = 0.2 ether;
     uint256 public immutable endOfSale;
-    GLDToken public immutable token;
+    FixedGLDToken public immutable token;
 
     mapping(address => uint256) public purchasedTokens;
 
@@ -26,7 +26,7 @@ contract Sale is Ownable {
     event OwnerWithdrawNotSoldTokens(address recipient, uint256 amount);
     event EtherWithdraw(address recipient, uint256 amount);
 
-    constructor(GLDToken _token, uint256 _endOfSale) {
+    constructor(FixedGLDToken _token, uint256 _endOfSale) {
         token = _token;
         endOfSale = _endOfSale;
     }
