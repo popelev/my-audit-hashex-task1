@@ -14,9 +14,8 @@ contract GLDToken is ERC777 {
 }
 
 contract Sale is Ownable {
-    uint256 public constant END_OF_SALE_TIMESTAMP = 0; //1661790839
     uint256 public constant PRICE = 0.2 ether;
-
+    uint256 public immutable endOfSale;
     GLDToken public immutable token;
 
     mapping(address => uint256) public purchasedTokens;
@@ -27,8 +26,9 @@ contract Sale is Ownable {
     event OwnerWithdrawNotSoldTokens(address recipient, uint256 amount);
     event EtherWithdraw(address recipient, uint256 amount);
 
-    constructor(GLDToken _token) {
+    constructor(GLDToken _token, uint256 _endOfSale) {
         token = _token;
+        endOfSale = _endOfSale;
     }
 
     function putOnSale(uint256 amountToSell) external onlyOwner {
@@ -39,13 +39,15 @@ contract Sale is Ownable {
     }
 
     modifier onlyAfterSale() {
-        require(block.timestamp > END_OF_SALE_TIMESTAMP, "sale not ended");
+        require(block.timestamp > endOfSale, "sale not ended");
+        _;
+    }
+    modifier onlyEOA() {
+        require(msg.sender == tx.origin, "only eoa");
         _;
     }
 
-    function buyTokens() external payable {
-        require(msg.sender == tx.origin, "only eoa");
-
+    function buyTokens() external payable onlyEOA {
         uint256 availableTokens = getAvailableAmountForSale();
         require(availableTokens > 0, "all tokens sold");
 
@@ -70,16 +72,16 @@ contract Sale is Ownable {
 
     function withdraw() external onlyAfterSale {
         uint256 tokenAmout = purchasedTokens[msg.sender];
-        require(token.transfer(msg.sender, tokenAmout), "transfer failed");
         purchasedTokens[msg.sender] = 0;
+        require(token.transfer(msg.sender, tokenAmout), "transfer failed");
 
         emit TokensWithdraw(msg.sender, tokenAmout);
     }
 
     function withdrawNotSoldTokens(address recipient) external onlyOwner onlyAfterSale {
         uint256 tokenAmout = getAvailableAmountForSale();
-        require(token.transfer(recipient, tokenAmout), "transfer failed");
         setAvailableAmountForSale(0);
+        require(token.transfer(recipient, tokenAmout), "transfer failed");
 
         emit OwnerWithdrawNotSoldTokens(recipient, tokenAmout);
     }
