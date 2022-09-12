@@ -21,7 +21,7 @@ contract FixedSale is Ownable {
     mapping(address => uint256) public purchasedTokens;
 
     event TokensPutOnSale(uint256 amountToSell);
-    event TokensSold(address buyer, uint256 amount);
+    event TokensSold(address buyer, uint256 etherAmount, uint256 tokenAmount);
     event TokensWithdraw(address owner, uint256 amount);
     event OwnerWithdrawNotSoldTokens(address recipient, uint256 amount);
     event EtherWithdraw(address recipient, uint256 amount);
@@ -67,7 +67,7 @@ contract FixedSale is Ownable {
         setAvailableAmountForSale(availableTokens - tokensPurchased);
         purchasedTokens[msg.sender] = purchasedTokens[msg.sender] + tokensPurchased;
 
-        emit TokensSold(msg.sender, tokensPurchased);
+        emit TokensSold(msg.sender, msg.value, tokensPurchased);
     }
 
     function withdraw() external onlyAfterSale {

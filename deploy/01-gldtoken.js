@@ -6,7 +6,7 @@ const { verify } = require("../utils/verify")
 module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, log } = deployments
     const { deployer } = await getNamedAccounts()
-
+    log("Deployr: " + deployer)
     const initialSupply = ethers.utils.parseEther("10.0")
     const deployArgs = [initialSupply, []]
     log(" " + deployArgs)

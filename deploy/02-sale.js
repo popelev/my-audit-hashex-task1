@@ -8,6 +8,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deployer } = await getNamedAccounts()
 
     const gldToken = await ethers.getContract("FixedGLDToken", deployer)
+
     const deployArgs = [gldToken.address, 0]
     log(" " + deployArgs)
     /* Deply contract */
