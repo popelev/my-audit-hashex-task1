@@ -72,6 +72,7 @@ contract FixedSale is Ownable {
 
     function withdraw() external onlyAfterSale {
         uint256 tokenAmout = purchasedTokens[msg.sender];
+        require(tokenAmout > 0, "nothing to withdraw");
         purchasedTokens[msg.sender] = 0;
         require(token.transfer(msg.sender, tokenAmout), "transfer failed");
 
@@ -80,6 +81,7 @@ contract FixedSale is Ownable {
 
     function withdrawNotSoldTokens(address recipient) external onlyOwner onlyAfterSale {
         uint256 tokenAmout = getAvailableAmountForSale();
+        require(tokenAmout > 0, "nothing to withdraw");
         setAvailableAmountForSale(0);
         require(token.transfer(recipient, tokenAmout), "transfer failed");
 
@@ -88,6 +90,7 @@ contract FixedSale is Ownable {
 
     function withdrawEther(address payable recipient) external onlyOwner {
         uint256 etherAmout = address(this).balance;
+        require(etherAmout > 0, "nothing to withdraw");
         (bool success, ) = recipient.call{value: etherAmout}("");
         require(success, "transfer failed");
 
@@ -100,5 +103,17 @@ contract FixedSale is Ownable {
 
     function setAvailableAmountForSale(uint256 newAmount) internal {
         purchasedTokens[address(this)] = newAmount;
+    }
+}
+
+contract BuyerAsContract {
+    FixedSale sale;
+
+    constructor(FixedSale _sale) {
+        sale = _sale;
+    }
+
+    function buy() external payable {
+        sale.buyTokens{value: address(this).balance}();
     }
 }

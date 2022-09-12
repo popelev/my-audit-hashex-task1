@@ -12,7 +12,7 @@ const { developmentChains, networkConfig } = require("../../helper-hardhat-confi
           let initSaleAmount
           const chainId = network.config.chainId
 
-          xdescribe("Befor give to Sale contract allowance to transfer tokens from deployer", async function () {
+          describe("Befor give to Sale contract allowance to transfer tokens from deployer", async function () {
               beforeEach(async function () {
                   accounts = await ethers.getSigners()
                   deployer = (await getNamedAccounts()).deployer
@@ -21,7 +21,7 @@ const { developmentChains, networkConfig } = require("../../helper-hardhat-confi
                   await deployments.fixture(["all"])
                   gldToken = await ethers.getContract("FixedGLDToken", deployer)
                   saleContract = await ethers.getContract("FixedSale", deployer)
-                  PRICE = BigNumber.from(saleContract.PRICE())
+                  PRICE = saleContract.PRICE()
               })
 
               describe("Initialize", async function () {
@@ -61,7 +61,7 @@ const { developmentChains, networkConfig } = require("../../helper-hardhat-confi
                   await saleContract.putOnSale(initSaleAmount)
               })
 
-              xdescribe("Put on Sale correctly", async function () {
+              describe("Put on Sale correctly", async function () {
                   it("All ERC777 tokens on Sale contract", async function () {
                       expect(await gldToken.balanceOf(saleContract.address)).to.equal(
                           initSaleAmount
@@ -87,6 +87,9 @@ const { developmentChains, networkConfig } = require("../../helper-hardhat-confi
                       expect(await saleContractUser1.purchasedTokens(user1)).to.equal(
                           ethers.utils.parseEther("1.0")
                       )
+                      expect(await saleContractUser1.getAvailableAmountForSale()).to.equal(
+                          ethers.utils.parseEther("9.0")
+                      )
                   })
                   it("Buy 0.5 token", async function () {
                       await saleContractUser1.buyTokens({
@@ -94,6 +97,9 @@ const { developmentChains, networkConfig } = require("../../helper-hardhat-confi
                       })
                       expect(await saleContractUser1.purchasedTokens(user1)).to.equal(
                           ethers.utils.parseEther("0.5")
+                      )
+                      expect(await saleContractUser1.getAvailableAmountForSale()).to.equal(
+                          ethers.utils.parseEther("9.5")
                       )
                   })
                   it("Buy 1 and 0.25 tokens one by one (1.25 in total)", async function () {
@@ -128,6 +134,93 @@ const { developmentChains, networkConfig } = require("../../helper-hardhat-confi
                               value: ethers.utils.parseEther("1"),
                           })
                       ).to.be.revertedWith("all tokens sold")
+                  })
+                  it("Reverted if contract try to buy", async function () {
+                      let buyerAsContract = await ethers.getContract("BuyerAsContract", user1)
+                      await expect(
+                          buyerAsContract.buy({
+                              value: ethers.utils.parseEther("1"),
+                          })
+                      ).to.be.revertedWith("only eoa")
+                  })
+              })
+
+              describe("withdraw sold tokens", async function () {
+                  it("Withdraw event detected", async function () {
+                      await saleContractUser1.buyTokens({
+                          value: PRICE,
+                      })
+                      expect(
+                          await saleContractUser1.withdraw({
+                              value: 0,
+                          })
+                      ).to.emit(saleContractUser1, "TokensWithdraw")
+                  })
+                  it("Reverted if nothing to withdraw", async function () {
+                      await expect(
+                          saleContractUser1.withdraw({
+                              value: 0,
+                          })
+                      ).to.be.revertedWith("nothing to withdraw")
+                  })
+                  it("Withdraw tokens after buy", async function () {
+                      expect(await gldToken.balanceOf(user1)).to.equal(0)
+
+                      await saleContractUser1.buyTokens({
+                          value: PRICE,
+                      })
+
+                      await saleContractUser1.withdraw()
+
+                      expect(await gldToken.balanceOf(user1)).to.equal(ethers.utils.parseEther("1"))
+                  })
+              })
+              describe("Withdraw not sold tokens", async function () {
+                  it("Withdraw event detected", async function () {
+                      expect(
+                          await saleContract.withdrawNotSoldTokens(deployer, {
+                              value: 0,
+                          })
+                      ).to.emit(saleContractUser1, "OwnerWithdrawNotSoldTokens")
+                  })
+                  it("Reverted if not owner", async function () {
+                      await expect(
+                          saleContractUser1.withdrawNotSoldTokens(deployer, {
+                              value: 0,
+                          })
+                      ).to.be.revertedWith("Ownable: caller is not the owner")
+                  })
+                  it("Reverted if nothing to withdraw", async function () {
+                      await saleContractUser1.buyTokens({ value: ethers.utils.parseEther("2") })
+                      await expect(
+                          saleContract.withdrawNotSoldTokens(deployer, {
+                              value: 0,
+                          })
+                      ).to.be.revertedWith("nothing to withdraw")
+                  })
+              })
+              describe("Withdraw ethers", async function () {
+                  it("Withdraw event detected", async function () {
+                      await saleContractUser1.buyTokens({ value: ethers.utils.parseEther("2") })
+                      expect(
+                          await saleContract.withdrawEther(deployer, {
+                              value: 0,
+                          })
+                      ).to.emit(saleContract, "EtherWithdraw")
+                  })
+                  it("Reverted if not owner", async function () {
+                      await expect(
+                          saleContractUser1.withdrawEther(deployer, {
+                              value: 0,
+                          })
+                      ).to.be.revertedWith("Ownable: caller is not the owner")
+                  })
+                  it("Reverted if nothing to withdraw", async function () {
+                      await expect(
+                          saleContract.withdrawEther(deployer, {
+                              value: 0,
+                          })
+                      ).to.be.revertedWith("nothing to withdraw")
                   })
               })
           })
